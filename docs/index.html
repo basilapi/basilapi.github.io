@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BASIL documentation</title>
+  <meta name="description" content="How to run BASIL, use its REST API, write views, and use BASIL as a Java library.">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="../"><img src="../assets/logo.svg" alt=""><span>BASIL</span></a>
+    <nav class="site-nav">
+      <a class="active" href="./">Documentation</a>
+      <a href="../variables/">Variables</a>
+      <a href="#java">Java library</a>
+      <a href="https://github.com/basilapi/basil">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="doc">
+  <nav class="toc" aria-label="Contents">
+    <ul>
+      <li><a href="#concepts">Concepts</a></li>
+      <li><a href="#quickstart">Quick start</a></li>
+      <li><a href="#run">Running the server</a>
+        <ul>
+          <li><a href="#tdb2">TDB2 backend</a></li>
+          <li><a href="#mysql">MySQL backend</a></li>
+          <li><a href="#options">Options</a></li>
+        </ul>
+      </li>
+      <li><a href="#rest">REST API</a>
+        <ul>
+          <li><a href="#users">Users</a></li>
+          <li><a href="#create">Create an API</a></li>
+          <li><a href="#invoke">Invoke an API</a></li>
+          <li><a href="#formats">Output formats</a></li>
+          <li><a href="#manage">Manage an API</a></li>
+          <li><a href="#views">Views</a></li>
+          <li><a href="#docs">Name and description</a></li>
+          <li><a href="#alias">Aliases</a></li>
+          <li><a href="#credentials">Protected endpoints</a></li>
+        </ul>
+      </li>
+      <li><a href="#java">Java library</a>
+        <ul>
+          <li><a href="#maven">Maven</a></li>
+          <li><a href="#java-sparql">Parameterised queries</a></li>
+          <li><a href="#modules">Modules</a></li>
+        </ul>
+      </li>
+      <li><a href="#build">Building from source</a></li>
+    </ul>
+  </nav>
+
+  <div class="doc-body">
+    <h1>Documentation</h1>
+    <p class="lead">How to run BASIL, use its REST API, and use it as a Java library. This page refers to BASIL 1.0.0.</p>
+
+    <h2 id="concepts">Concepts</h2>
+    <p>An <strong>API</strong> in BASIL is a stored <em>specification</em>: a SPARQL endpoint and a SPARQL query (SELECT, CONSTRUCT, DESCRIBE, ASK, or Update). Input parameters are variables of the query that follow the <a href="../variables/">BASIL variables convention</a>. Each time the API is invoked, the parameters are bound, the query is executed on the endpoint, and the result is returned in the requested format.</p>
+    <p>An API can have <strong>views</strong> (templates or scripts that post-process the result), a <strong>name and description</strong>, and <strong>aliases</strong> (readable names used in place of the identifier). Every API is owned by the user who created it; reading is public, modifying requires authentication.</p>
+    <p>BASIL has no graphical interface: it is controlled through its HTTP API. All the examples below use <code>curl</code>.</p>
+
+    <h2 id="quickstart">Quick start</h2>
+    <p>Requirements: Java 21 or later.</p>
+<p class="code-label">1. Download and start</p>
+<pre><code><span class="cm"># from https://github.com/basilapi/basil/releases/latest</span>
+java -jar -Dbasil.configurationFile=./basil-server.ini \
+     -Dlog4j.configurationFile=./log4j2.xml \
+     basil-server-1.0.0.jar -p 8080</code></pre>
+<p class="code-label">2. Create a user</p>
+<pre><code>curl -X POST http://localhost:8080/basil/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"penelope","password":"mypassword","password2":"mypassword","email":"penelope@example.org"}'</code></pre>
+<p class="code-label">3. Write a query (query.rq)</p>
+<pre><code>PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;
+SELECT ?label WHERE {
+  ?_entity_iri rdfs:label ?label .
+  FILTER(lang(?label) = "en")
+}</code></pre>
+<p class="code-label">4. Store it as an API</p>
+<pre><code>curl -u penelope:mypassword -X PUT http://localhost:8080/basil \
+  -H "X-Basil-Endpoint: https://dbpedia.org/sparql" -T query.rq
+<span class="cm">{"message":"Created","location":"http://localhost:8080/basil/s50nwb9679dd"}</span></code></pre>
+<p class="code-label">5. Use it</p>
+<pre><code>curl "http://localhost:8080/basil/s50nwb9679dd/api.json?entity=http://dbpedia.org/resource/Rome"</code></pre>
+
+    <h2 id="run">Running the server</h2>
+    <p>The runnable jar <code>basil-server-VERSION.jar</code> is attached to each <a href="https://github.com/basilapi/basil/releases">release</a>, together with an example configuration <code>basil-server.ini</code> and a logging configuration <code>log4j2.xml</code>.</p>
+
+    <h3 id="tdb2">TDB2 backend (default)</h3>
+    <p>APIs, views and users are stored in an Apache Jena TDB2 database. The example configuration:</p>
+<pre><code>basil = io.github.basilapi.basil.server.BasilConfiguration
+<span class="cm"># Namespace for the URIs of APIs, users and views stored by BASIL</span>
+basil.namespace = http://basilapi.github.io/data/ns/
+<span class="cm"># Folder where BASIL stores its data (created if missing)</span>
+basil.tdbLocation = ./basil-data
+
+tdb2Realm = io.github.basilapi.basil.server.ShiroRealm
+tdb2Realm.basilConfiguration = $basil
+<span class="cm"># ... Shiro settings, do not change</span></code></pre>
+    <p>Change <code>basil.tdbLocation</code> to keep the data elsewhere. To back up an instance, stop the server and copy that folder.</p>
+
+    <h3 id="mysql">MySQL backend (deprecated)</h3>
+    <p>Earlier versions stored data in MySQL. This backend is still available but deprecated. Create a database with <a href="https://github.com/basilapi/basil/blob/v1.0.0/db.sql"><code>db.sql</code></a>, prepare the connection parameters following <a href="https://github.com/basilapi/basil/blob/v1.0.0/basil.ini.default"><code>basil.ini.default</code></a>, and pass that file as <code>basil.configurationFile</code>.</p>
+
+    <h3 id="options">Options</h3>
+    <table>
+      <thead><tr><th>Option</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>-p, --port</code></td><td>Port to listen to (default 8080)</td></tr>
+        <tr><td><code>-h, --help</code></td><td>Show the help</td></tr>
+        <tr><td><code>-Dbasil.configurationFile=…</code></td><td>Configuration file (required)</td></tr>
+        <tr><td><code>-Dlog4j.configurationFile=…</code></td><td>Logging configuration</td></tr>
+        <tr><td><code>-Dbasil.sparql.serviceParameters=true</code></td><td>Allow parameters as <code>SERVICE</code> IRI (default: disabled). See <a href="../variables/#service">Variables</a>.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rest">REST API</h2>
+    <p>All paths are relative to the server root, e.g. <code>http://localhost:8080</code>. Operations that modify data require HTTP Basic authentication of the owner of the API. Every response about an API carries <code>X-Basil-*</code> headers with the links to its sub-resources.</p>
+    <table>
+      <thead><tr><th>Resource</th><th>Methods</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>/basil</code></td><td>GET, PUT</td><td>List all APIs; create an API</td></tr>
+        <tr><td><code>/basil/users</code></td><td>POST</td><td>Create a user</td></tr>
+        <tr><td><code>/basil/users/{username}/apis</code></td><td>GET</td><td>APIs created by a user</td></tr>
+        <tr><td><code>/basil/{id}</code></td><td>GET, DELETE</td><td>Redirects (303) to <code>/spec</code>; delete the API and its sub-resources</td></tr>
+        <tr><td><code>/basil/{id}/api</code></td><td>GET, POST</td><td>Invoke the API</td></tr>
+        <tr><td><code>/basil/{id}/api.{ext}</code></td><td>GET, POST</td><td>Invoke the API with a given format or view</td></tr>
+        <tr><td><code>/basil/{id}/spec</code></td><td>GET, PUT</td><td>Read or replace the endpoint and query</td></tr>
+        <tr><td><code>/basil/{id}/explain</code></td><td>GET</td><td>The query after parameter substitution</td></tr>
+        <tr><td><code>/basil/{id}/direct</code></td><td>GET</td><td>Redirects (303) to the endpoint, with the rewritten query</td></tr>
+        <tr><td><code>/basil/{id}/clone</code></td><td>GET</td><td>Create a copy of the API, owned by the caller</td></tr>
+        <tr><td><code>/basil/{id}/view</code>, <code>/view/{name}</code></td><td>GET, PUT, DELETE</td><td>Manage views</td></tr>
+        <tr><td><code>/basil/{id}/docs</code></td><td>GET, PUT, DELETE</td><td>Name and description</td></tr>
+        <tr><td><code>/basil/{id}/alias</code></td><td>GET, PUT, DELETE</td><td>Aliases</td></tr>
+        <tr><td><code>/basil/{id}/auth</code></td><td>PUT, DELETE</td><td>Credentials for a protected endpoint</td></tr>
+        <tr><td><code>/basil/{id}/api-docs</code></td><td>GET</td><td>Swagger description (JSON, or HTML in a browser)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="users">Users</h3>
+<pre><code>curl -X POST http://localhost:8080/basil/users -H "Content-Type: application/json" -d @user.json
+curl http://localhost:8080/basil/users/penelope/apis</code></pre>
+
+    <h3 id="create">Create an API</h3>
+    <p>Send the query as the request body, and the endpoint in the <code>X-Basil-Endpoint</code> header (or in the <code>endpoint</code> query parameter):</p>
+<pre><code>curl -u penelope:mypassword -X PUT http://localhost:8080/basil \
+  -H "X-Basil-Endpoint: https://dbpedia.org/sparql" -T query.rq</code></pre>
+    <p>The response is <code>201 Created</code>, with the location of the new API. A query that cannot be parsed, or that uses an undeclared prefix in a typed parameter, gives <code>400</code>.</p>
+
+    <h3 id="invoke">Invoke an API</h3>
+<pre><code>curl "http://localhost:8080/basil/s50nwb9679dd/api?entity=http://dbpedia.org/resource/Rome"
+curl -X POST http://localhost:8080/basil/s50nwb9679dd/api.json \
+  -d "entity=http://dbpedia.org/resource/Rome"</code></pre>
+    <p>Parameters are passed as query string or as form data. A missing mandatory parameter, or an invalid value, gives <code>400</code> with an explanation. The request parameters <code>limit</code> and <code>offset</code> set the <code>LIMIT</code> and <code>OFFSET</code> of the query. See <a href="../variables/">Variables</a> for how values are substituted.</p>
+
+    <h3 id="formats">Output formats</h3>
+    <p>The format is chosen by content negotiation (<code>Accept</code> header) or by an extension of <code>/api</code>:</p>
+    <table>
+      <thead><tr><th>Extension</th><th>Media type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>.json</code></td><td><code>application/json</code></td><td>Plain JSON, no namespaces</td></tr>
+        <tr><td><code>.xml</code></td><td><code>application/xml</code></td><td>Plain XML, no namespaces</td></tr>
+        <tr><td><code>.csv</code>, <code>.tsv</code></td><td><code>text/csv</code>, <code>text/tab-separated-values</code></td><td></td></tr>
+        <tr><td><code>.txt</code></td><td><code>text/plain</code></td><td>Text table</td></tr>
+        <tr><td><code>.sparql-json</code>, <code>.sparql-xml</code></td><td>SPARQL results JSON / XML</td><td>Standard SPARQL result formats</td></tr>
+        <tr><td><code>.ttl</code>, <code>.nt</code>, <code>.nq</code></td><td>Turtle, N-Triples, N-Quads</td><td rowspan="2">RDF, for CONSTRUCT and DESCRIBE</td></tr>
+        <tr><td><code>.rdf</code>, <code>.jsonld</code>, <code>.jrdf</code></td><td>RDF/XML, JSON-LD, RDF/JSON</td></tr>
+        <tr><td><code>.{view}</code></td><td>as declared by the view</td><td>See <a href="#views">Views</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="manage">Manage an API</h3>
+<pre><code><span class="cm"># read the specification</span>
+curl http://localhost:8080/basil/s50nwb9679dd/spec
+<span class="cm"># replace query and endpoint</span>
+curl -u penelope:mypassword -X PUT http://localhost:8080/basil/s50nwb9679dd/spec \
+  -H "X-Basil-Endpoint: https://dbpedia.org/sparql" -T query.rq
+<span class="cm"># see the query that would be executed</span>
+curl "http://localhost:8080/basil/s50nwb9679dd/explain?entity=http://dbpedia.org/resource/Rome"
+<span class="cm"># delete the API</span>
+curl -u penelope:mypassword -X DELETE http://localhost:8080/basil/s50nwb9679dd</code></pre>
+
+    <h3 id="views">Views</h3>
+    <p>A view transforms the result of an API, for example into an HTML snippet. Two engines are available: <strong>Mustache</strong> templates (<code>Content-Type: template/mustache</code>) and <strong>JavaScript</strong> (<code>Content-Type: application/javascript</code>, executed with Rhino). The <code>type</code> parameter declares the media type of the output.</p>
+    <p>In a Mustache template, the rows of the result are available as <code>items</code>, and each variable of the query by its name:</p>
+<p class="code-label">list.tmpl</p>
+<pre><code>&lt;ul&gt;
+{{#items}}
+  &lt;li&gt;&lt;a href="{{Concept}}"&gt;{{Concept}}&lt;/a&gt; ({{Type}})&lt;/li&gt;
+{{/items}}
+&lt;/ul&gt;</code></pre>
+<pre><code><span class="cm"># create or update the view "list"</span>
+curl -u penelope:mypassword -X PUT \
+  "http://localhost:8080/basil/s50nwb9679dd/view/list?type=text/html" \
+  -H "Content-Type: template/mustache" -T list.tmpl
+<span class="cm"># use it, as extension of /api</span>
+curl "http://localhost:8080/basil/s50nwb9679dd/api.list?entity=http://dbpedia.org/resource/Rome"
+<span class="cm"># list and delete</span>
+curl http://localhost:8080/basil/s50nwb9679dd/view
+curl -u penelope:mypassword -X DELETE http://localhost:8080/basil/s50nwb9679dd/view/list</code></pre>
+
+    <h3 id="docs">Name and description</h3>
+<pre><code>echo "Labels of a DBpedia entity, in English" &gt; doc.txt
+curl -u penelope:mypassword -X PUT http://localhost:8080/basil/s50nwb9679dd/docs \
+  -H "X-Basil-Name: Entity labels" -T doc.txt</code></pre>
+    <p>The name and description are also used in the Swagger description at <code>/api-docs</code>.</p>
+
+    <h3 id="alias">Aliases</h3>
+    <p>An alias is a readable name that can be used in place of the identifier, in any path. The body lists one alias per line.</p>
+<pre><code>printf "entity-labels\n" &gt; alias.txt
+curl -u penelope:mypassword -X PUT http://localhost:8080/basil/s50nwb9679dd/alias -T alias.txt
+curl "http://localhost:8080/basil/entity-labels/api?entity=http://dbpedia.org/resource/Rome"</code></pre>
+
+    <h3 id="credentials">Protected endpoints</h3>
+    <p>If the SPARQL endpoint requires authentication, store its credentials with the API. The body contains user and password, on two lines.</p>
+<pre><code>printf "user\npassword\n" | curl -u penelope:mypassword -X PUT \
+  http://localhost:8080/basil/s50nwb9679dd/auth -T -</code></pre>
+
+    <h2 id="java">Java library</h2>
+    <p>BASIL is a set of Maven modules published on Maven Central under the group <code>io.github.basilapi</code>. The <code>sparql</code> module is a small library, depending only on Apache Jena, that implements the <a href="../variables/">variables convention</a>: it reads the parameters declared in a query and binds values to them safely. It can be used without the server.</p>
+
+    <h3 id="maven">Maven</h3>
+<pre><code>&lt;dependency&gt;
+  &lt;groupId&gt;io.github.basilapi&lt;/groupId&gt;
+  &lt;artifactId&gt;sparql&lt;/artifactId&gt;
+  &lt;version&gt;1.0.0&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+    <p>Gradle: <code>implementation("io.github.basilapi:sparql:1.0.0")</code>. Requires Java 21; brings Apache Jena 6.</p>
+    <div class="note warn"><p><strong>Coming soon.</strong> The 1.0.0 artifacts are not yet available on Maven Central; they will be published soon. Meanwhile, build from source (<code>mvn clean install</code>) to install them in your local Maven repository, or use the previous release, 0.8.3, which follows the earlier variables convention.</p></div>
+
+    <h3 id="java-sparql">Parameterised queries</h3>
+<pre><code>import io.github.basilapi.basil.core.exceptions.SpecificationParsingException;
+import io.github.basilapi.basil.sparql.QueryParameter;
+import io.github.basilapi.basil.sparql.Specification;
+import io.github.basilapi.basil.sparql.SpecificationFactory;
+import io.github.basilapi.basil.sparql.VariablesBinder;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.ResultSetFormatter;
+import org.apache.jena.sparql.exec.http.QueryExecutionHTTP;
+
+public class Example {
+  public static void main(String[] args) throws SpecificationParsingException {
+    String endpoint = "https://dbpedia.org/sparql";
+    String sparql = """
+        PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;
+        SELECT ?label WHERE {
+          ?_entity_iri rdfs:label ?label .
+          FILTER(lang(?label) = ?_lang)
+        } LIMIT ?_max_number
+        """;
+
+    <span class="cm">// Parse the query and its parameters.</span>
+    <span class="cm">// strict = true: fail on parameters that cannot be resolved (e.g. undeclared prefix)</span>
+    Specification spec = SpecificationFactory.create(endpoint, sparql, true);
+    for (QueryParameter p : spec.getParameters()) {
+      System.out.println(p.getName() + (p.isOptional() ? " (optional)" : "")
+          + (p.isIri() ? " IRI" : p.isNumber() ? " number" : " literal"));
+    }
+
+    <span class="cm">// Bind values: each is converted to the right RDF term.</span>
+    Query query = new VariablesBinder(spec)
+        .bind("entity", "http://dbpedia.org/resource/Rome")
+        .bind("lang", "en")
+        .bind("max", "5")
+        .toQuery();
+
+    try (var qe = QueryExecutionHTTP.service(spec.getEndpoint()).query(query).build()) {
+      ResultSetFormatter.out(qe.execSelect());
+    }
+  }
+}</code></pre>
+    <p>Main classes:</p>
+    <ul>
+      <li><code>SpecificationFactory.create(endpoint, query[, strict])</code> — parses a query and returns a <code>Specification</code>. Throws <code>UnknownQueryTypeException</code> or, in strict mode, <code>ParameterParsingException</code>.</li>
+      <li><code>Specification</code> — the endpoint, the query and its parameters: <code>getParameters()</code>, <code>hasParameter(name)</code>, <code>getVariableOfParameter(name)</code>, <code>isUpdate()</code>.</li>
+      <li><code>QueryParameter</code> — name and type of a parameter: <code>isOptional()</code>, <code>isIri()</code>, <code>isNumber()</code>, <code>isLangedLiteral()</code>, <code>getLang()</code>, <code>isTypedLiteral()</code>, <code>getDatatype()</code>.</li>
+      <li><code>VariablesBinder</code> — binds values: <code>bind(name, value)</code> uses the declared type; <code>bindIri</code>, <code>bindNumber</code>, <code>bindPlainLiteral</code>, <code>bindLangedLiteral</code>, <code>bindTypedLiteral</code> force one. <code>toQuery()</code> returns a Jena <code>Query</code>, <code>toUpdate()</code> an <code>UpdateRequest</code>. An invalid IRI or number throws <code>IllegalArgumentException</code>.</li>
+    </ul>
+    <div class="note"><p>Values are always set as RDF terms through Jena's <code>ParameterizedSparqlString</code>, so they cannot change the structure of the query.</p></div>
+
+    <h3 id="modules">Modules</h3>
+    <table>
+      <thead><tr><th>Artifact</th><th>Content</th></tr></thead>
+      <tbody>
+        <tr><td><code>sparql</code></td><td>Variables convention: parsing parameters and binding values</td></tr>
+        <tr><td><code>core</code></td><td><code>ApiManager</code>, store and user interfaces, views (Mustache, Rhino), file store</td></tr>
+        <tr><td><code>rendering</code></td><td>Serialisation of results in the supported formats</td></tr>
+        <tr><td><code>store</code></td><td>MySQL store (deprecated)</td></tr>
+        <tr><td><code>store-tdb2</code></td><td>Apache Jena TDB2 store</td></tr>
+        <tr><td><code>rest</code></td><td>JAX-RS resources of the HTTP API</td></tr>
+        <tr><td><code>basil-server</code></td><td>Runnable server (Jetty 12)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="build">Building from source</h2>
+<pre><code>git clone https://github.com/basilapi/basil.git
+cd basil
+mvn clean install               <span class="cm"># with integration tests (need internet)</span>
+mvn clean install -P '!it'      <span class="cm"># skip integration tests</span>
+mvn clean install -DskipTests   <span class="cm"># skip all tests</span></code></pre>
+    <p>The runnable jar is <code>server/target/basil-server-VERSION.jar</code>. Requires Java 21 and Maven.</p>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>BASIL · Apache License 2.0</span>
+    <span><a href="https://github.com/basilapi/basil">Source</a> · <a href="https://github.com/basilapi/basil/releases">Releases</a> · <a href="https://github.com/basilapi/basil/issues">Issues</a> · <a href="../ontology/ns/">Ontology</a></span>
+  </div>
+</footer>
+</body>
+</html>

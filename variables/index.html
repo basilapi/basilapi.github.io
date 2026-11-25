@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BASIL variables — SPARQL variable naming convention for API parameters</title>
+  <meta name="description" content="Specification of the BASIL convention mapping SPARQL variables to Web API parameters.">
+  <link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="../"><img src="../assets/logo.svg" alt=""><span>BASIL</span></a>
+    <nav class="site-nav">
+      <a href="../docs/">Documentation</a>
+      <a class="active" href="./">Variables</a>
+      <a href="../docs/#java">Java library</a>
+      <a href="https://github.com/basilapi/basil">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="doc">
+  <nav class="toc" aria-label="Contents">
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#syntax">Syntax</a></li>
+      <li><a href="#summary">Summary table</a></li>
+      <li><a href="#types">Parameter types</a>
+        <ul>
+          <li><a href="#plain">Plain literal</a></li>
+          <li><a href="#optional">Optional</a></li>
+          <li><a href="#iri">IRI</a></li>
+          <li><a href="#number">Number</a></li>
+          <li><a href="#lang">Language tag</a></li>
+          <li><a href="#xsd">XSD datatype</a></li>
+          <li><a href="#prefixed">Prefixed datatype</a></li>
+          <li><a href="#service">SERVICE endpoint</a></li>
+        </ul>
+      </li>
+      <li><a href="#rules">Rules and edge cases</a></li>
+      <li><a href="#errors">Errors</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#changes">Changes</a></li>
+    </ul>
+  </nav>
+
+  <div class="doc-body">
+    <h1>BASIL variables</h1>
+    <p class="lead">A naming convention that turns SPARQL variables into Web API parameters. Parameters, and their types, are declared in the query itself.</p>
+    <p>Version: BASIL 1.0.0. Source of truth: <a href="https://github.com/basilapi/basil/blob/v1.0.0/sparql/src/main/java/io/github/basilapi/basil/sparql/VariableParser.java"><code>VariableParser</code></a>.</p>
+
+    <h2 id="overview">Overview</h2>
+    <p>When an API is invoked, BASIL looks at the variables of the stored query. Any variable whose name starts with an underscore is a <em>parameter</em>. The value received in the HTTP request is converted into an RDF term and substituted for the variable, then the query is executed.</p>
+<p class="code-label">Query</p>
+<pre><code>PREFIX dbo: &lt;http://dbpedia.org/ontology/&gt;
+SELECT ?city WHERE {
+  ?city a dbo:City ;
+        dbo:country <span class="hl">?_country_iri</span> .
+} LIMIT <span class="hl">?_limit_number</span></code></pre>
+<p class="code-label">Request</p>
+<pre><code>GET /basil/{id}/api?country=http://dbpedia.org/resource/Italy&amp;limit=10</code></pre>
+<p class="code-label">Query executed</p>
+<pre><code>PREFIX dbo: &lt;http://dbpedia.org/ontology/&gt;
+SELECT ?city WHERE {
+  ?city a dbo:City ;
+        dbo:country <span class="hl">&lt;http://dbpedia.org/resource/Italy&gt;</span> .
+} LIMIT <span class="hl">10</span></code></pre>
+
+    <h2 id="syntax">Syntax</h2>
+    <p>The variable name has up to three parts, separated by underscores:</p>
+<pre><code>?_<span class="hl">name</span>[_<span class="hl">type</span>[_<span class="hl">localName</span>]]      <span class="cm"># mandatory parameter</span>
+?__<span class="hl">name</span>[_<span class="hl">type</span>[_<span class="hl">localName</span>]]     <span class="cm"># optional parameter</span></code></pre>
+    <ul>
+      <li><code>?</code> and <code>$</code> are equivalent, as in SPARQL.</li>
+      <li>One leading underscore: the parameter is <strong>mandatory</strong>. Two: it is <strong>optional</strong>.</li>
+      <li><strong>name</strong> is the name of the API parameter. It cannot contain underscores.</li>
+      <li><strong>type</strong> (optional) is one of the keywords <code>iri</code>, <code>literal</code>, <code>number</code>, a two-letter language tag, an XSD datatype local name, or a prefix declared in the query.</li>
+      <li><strong>localName</strong> (only after a prefix) is the local name of the datatype. It may contain underscores.</li>
+    </ul>
+
+    <h2 id="summary">Summary table</h2>
+    <table>
+      <thead><tr><th>Variable</th><th>Parameter</th><th>Value <code>v</code> is substituted as</th></tr></thead>
+      <tbody>
+        <tr><td><code>?_name</code></td><td><code>name</code>, mandatory</td><td><code>"v"</code></td></tr>
+        <tr><td><code>?__name</code></td><td><code>name</code>, optional</td><td><code>"v"</code>, or left unbound</td></tr>
+        <tr><td><code>?_name_literal</code></td><td><code>name</code></td><td><code>"v"</code></td></tr>
+        <tr><td><code>?_name_iri</code></td><td><code>name</code></td><td><code>&lt;v&gt;</code></td></tr>
+        <tr><td><code>?_name_number</code></td><td><code>name</code></td><td><code>v</code> as <code>xsd:integer</code>, or <code>xsd:double</code> if it contains a dot</td></tr>
+        <tr><td><code>?_name_en</code></td><td><code>name</code></td><td><code>"v"@en</code> (any two-letter tag)</td></tr>
+        <tr><td><code>?_name_date</code></td><td><code>name</code></td><td><code>"v"^^xsd:date</code> (any XSD datatype)</td></tr>
+        <tr><td><code>?_name_ex_myType</code></td><td><code>name</code></td><td><code>"v"^^ex:myType</code> (prefix <code>ex</code> declared in the query)</td></tr>
+        <tr><td><code>SERVICE ?_name_iri</code></td><td><code>name</code></td><td><code>&lt;v&gt;</code>, only if enabled (see <a href="#service">below</a>)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="types">Parameter types</h2>
+
+    <h3 id="plain">Plain literal — <code>?_name</code>, <code>?_name_literal</code></h3>
+    <p>The default. The value becomes a plain string literal, with quotes and special characters escaped.</p>
+<pre><code>SELECT ?s WHERE { ?s rdfs:label ?_label }
+<span class="cm"># ?label=Rome  →  ?s rdfs:label "Rome"</span></code></pre>
+
+    <h3 id="optional">Optional — <code>?__name</code></h3>
+    <p>Two leading underscores make the parameter optional. If the request does not provide it, the variable remains a normal, unbound SPARQL variable. Write the query so that it is meaningful in both cases, for example with <code>OPTIONAL</code> or <code>FILTER(!BOUND(...))</code>. The type suffixes below apply in the same way: <code>?__type_iri</code>, <code>?__min_number</code>. Avoid optional parameters in positions where SPARQL does not allow a variable, such as <code>LIMIT</code>.</p>
+<pre><code>SELECT ?book WHERE {
+  ?book a schema:Book ; schema:author ?__author_iri .
+}
+<span class="cm"># no ?author      →  any author
+# ?author=http://… →  books by that author</span></code></pre>
+
+    <h3 id="iri">IRI — <code>?_name_iri</code></h3>
+    <p>The value is used as an IRI. Characters not allowed in a SPARQL IRI (spaces, <code>&lt; &gt; " { } | ^ ` \</code>) cause the request to fail with HTTP 400.</p>
+<pre><code>SELECT ?p ?o WHERE { ?_resource_iri ?p ?o }
+<span class="cm"># ?resource=http://dbpedia.org/resource/Rome  →  &lt;http://dbpedia.org/resource/Rome&gt; ?p ?o</span></code></pre>
+
+    <h3 id="number">Number — <code>?_name_number</code></h3>
+    <p>The value is a number: <code>xsd:integer</code>, or <code>xsd:double</code> if it contains a dot. Useful for <code>LIMIT</code>, <code>OFFSET</code> and numeric filters. A value that is not a number gives HTTP 400.</p>
+<pre><code>SELECT ?s WHERE { ?s ex:population ?p FILTER(?p &gt; ?_min_number) } LIMIT ?_limit_number</code></pre>
+
+    <h3 id="lang">Language tag — <code>?_name_xx</code></h3>
+    <p>Any two-letter suffix is read as a language tag. The value becomes a literal in that language.</p>
+<pre><code>SELECT ?s WHERE { ?s rdfs:label ?_label_it }
+<span class="cm"># ?label=Roma  →  "Roma"@it</span></code></pre>
+
+    <h3 id="xsd">XSD datatype — <code>?_name_type</code></h3>
+    <p>A suffix that is the local name of an XSD datatype known to Apache Jena (for example <code>integer</code>, <code>decimal</code>, <code>float</code>, <code>boolean</code>, <code>date</code>, <code>dateTime</code>, <code>duration</code>) gives a literal with that datatype.</p>
+<pre><code>SELECT ?e WHERE { ?e ex:date ?d FILTER(?d &gt;= ?_from_date) }
+<span class="cm"># ?from=2024-01-01  →  "2024-01-01"^^xsd:date</span></code></pre>
+
+    <h3 id="prefixed">Prefixed datatype — <code>?_name_prefix_localName</code></h3>
+    <p>When the type is followed by a further part, the type is read as a <strong>prefix</strong> and the rest as the local name of the datatype. The prefix must be declared in the query; <code>xsd</code> is always available, also when not declared. The local name may contain underscores.</p>
+<pre><code>PREFIX ex: &lt;http://example.org/ns#&gt;
+SELECT ?invoice WHERE { ?invoice ex:due ?_amount_ex_due_date }
+<span class="cm"># ?amount=2024-05-31  →  "2024-05-31"^^&lt;http://example.org/ns#due_date&gt;</span></code></pre>
+
+    <h3 id="service">SERVICE endpoint — <code>SERVICE ?_name_iri { … }</code></h3>
+    <p>A parameter can be used as the IRI of a <code>SERVICE</code> clause, so that the caller chooses which endpoint is queried. This is <strong>disabled by default</strong> and must be enabled when starting the server:</p>
+<pre><code>java -Dbasil.sparql.serviceParameters=true -jar basil-server-1.0.0.jar …</code></pre>
+    <p>When enabled, the value is always substituted as an IRI.</p>
+    <div class="note warn"><p>Do not enable this on a public server unless you intend to let any caller send queries, through your server, to any endpoint.</p></div>
+
+    <h2 id="rules">Rules and edge cases</h2>
+    <ul>
+      <li><strong>The underscore is reserved.</strong> It separates the parts of the name, so a parameter name cannot contain it. <code>?_first_name</code> is the parameter <code>first</code> with an unrecognised suffix <code>name</code> (substituted as plain literal); <code>?_first_name_en</code> is read as the parameter <code>first</code> typed <code>name:en</code>, which is rejected unless a prefix <code>name</code> is declared. Use <code>?_firstName</code> instead.</li>
+      <li><strong>Keywords are case-insensitive</strong>: <code>_IRI</code>, <code>_Number</code> are accepted.</li>
+      <li><strong>Two-letter suffixes are language tags</strong>, also when they could be a prefix. <code>?_x_ex</code> is the literal <code>"v"@ex</code>; a prefixed datatype always has three parts.</li>
+      <li><strong>Unknown suffixes</strong> fall back to plain literal.</li>
+      <li><strong>The same variable can appear many times</strong> in the query; all occurrences are substituted.</li>
+      <li><strong>One variable per parameter.</strong> Do not use two variables with the same parameter name and different types (e.g. <code>?_q</code> and <code>?_q_en</code>) in one query: only one of them is bound.</li>
+      <li><strong><code>limit</code> and <code>offset</code> are reserved request parameters.</strong> For SELECT, CONSTRUCT, DESCRIBE and ASK queries, <code>?limit=n</code> and <code>?offset=n</code> in the request set the <code>LIMIT</code> and <code>OFFSET</code> of the query, also when the query does not declare them. If you need your own paging parameters, use other names (e.g. <code>?_size_number</code>).</li>
+      <li><strong>Update queries</strong> (SPARQL 1.1 Update) follow the same convention.</li>
+      <li>Parameters can be passed as query string (<code>GET</code>) or as form parameters (<code>POST</code>). If a parameter is repeated, the first value is used.</li>
+    </ul>
+
+    <h2 id="errors">Errors</h2>
+    <table>
+      <thead><tr><th>Situation</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Creating or updating an API with <code>?_name_prefix_localName</code> whose prefix is not declared</td><td>HTTP 400; the API is not saved</td></tr>
+        <tr><td>Invoking an API without a mandatory parameter</td><td>HTTP 400, listing the missing parameters</td></tr>
+        <tr><td>Invalid IRI for an <code>_iri</code> parameter, or invalid number for <code>_number</code></td><td>HTTP 400</td></tr>
+      </tbody>
+    </table>
+    <p>Use <code>GET /basil/{id}/explain</code> to see the query after the substitution of the parameters.</p>
+
+    <h2 id="security">Security</h2>
+    <p>Substitution is safe against injection. Each value is serialised as an RDF term (escaped literal, validated IRI, or number) before the query is parsed, so a value cannot change the structure of the query. Parameters are never pasted into the query text as they are.</p>
+
+    <h2 id="changes">Changes</h2>
+    <ul>
+      <li><strong>1.0.0</strong> — prefixes in <code>?_name_prefix_localName</code> are resolved against the prefixes declared in the query; an undeclared prefix is an error (HTTP 400). APIs stored with earlier versions are still loaded, and such parameters are substituted as plain literals. Any XSD datatype known to Jena is accepted. Datatype local names may contain underscores. <code>SERVICE</code> parameters are disabled by default. Invalid parameter values return HTTP 400 instead of 500.</li>
+      <li><strong>0.x</strong> — original convention, described in the <a href="https://github.com/basilapi/basil/wiki/SPARQL-variable-name-convention-for-WEB-API-parameters-mapping">wiki</a>.</li>
+    </ul>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>BASIL · Apache License 2.0</span>
+    <span><a href="https://github.com/basilapi/basil">Source</a> · <a href="https://github.com/basilapi/basil/releases">Releases</a> · <a href="https://github.com/basilapi/basil/issues">Issues</a> · <a href="../ontology/ns/">Ontology</a></span>
+  </div>
+</footer>
+</body>
+</html>

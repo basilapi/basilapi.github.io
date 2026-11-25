@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BASIL — Building APIs SImpLy from SPARQL endpoints</title>
+  <meta name="description" content="BASIL is a middleware that builds Web APIs on top of SPARQL endpoints, from stored SPARQL queries.">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="./"><img src="assets/logo.svg" alt=""><span>BASIL</span></a>
+    <nav class="site-nav">
+      <a href="docs/">Documentation</a>
+      <a href="variables/">Variables</a>
+      <a href="docs/#java">Java library</a>
+      <a href="https://github.com/basilapi/basil">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <h1>Web APIs from <em>SPARQL</em> queries</h1>
+      <p class="lead">BASIL is a middleware between SPARQL endpoints and applications. You store a SPARQL query, BASIL publishes it as a Web API, with parameters, multiple output formats, views and Swagger documentation.</p>
+      <div class="buttons">
+        <a class="btn primary" href="https://github.com/basilapi/basil/releases/latest">Download</a>
+        <a class="btn ghost" href="docs/#quickstart">Quick start</a>
+        <a class="btn ghost" href="variables/">Parameter conventions</a>
+      </div>
+      <p class="version">Current release: <strong>1.0.0</strong> · Java 21 · Apache Jena 6 · Apache License 2.0</p>
+    </div>
+<pre><code><span class="cm"># 1. A SPARQL query; ?_entity_iri becomes a parameter</span>
+SELECT ?type WHERE { ?_entity_iri a ?type }
+
+<span class="cm"># 2. Store it as an API</span>
+curl -u user:pass -X PUT http://localhost:8080/basil \
+  -H "X-Basil-Endpoint: https://dbpedia.org/sparql" \
+  -T query.rq
+<span class="cm">→ {"location":"http://localhost:8080/basil/<span class="hl">s50nwb9679dd</span>"}</span>
+
+<span class="cm"># 3. Call it, in the format you need</span>
+curl "http://localhost:8080/basil/s50nwb9679dd/api.json\
+?entity=http://dbpedia.org/resource/Rome"</code></pre>
+  </section>
+
+  <section>
+    <h2>What BASIL does</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Queries become APIs</h3>
+        <p>An API is a SPARQL endpoint plus a query. Input parameters are declared in the query itself, by a simple <a href="variables/">variable naming convention</a>.</p>
+      </div>
+      <div class="card">
+        <h3>Many output formats</h3>
+        <p>JSON, XML and CSV without namespaces, for developers not familiar with Linked Data, and RDF formats (Turtle, N-Triples, RDF/XML, JSON-LD) for those who are.</p>
+      </div>
+      <div class="card">
+        <h3>Views</h3>
+        <p>Post-process results with Mustache templates or JavaScript, for example to produce an HTML snippet ready to embed in a page.</p>
+      </div>
+      <div class="card">
+        <h3>Self-documenting</h3>
+        <p>Every API has a Swagger description, a name and a description, and can be reached through human-readable aliases.</p>
+      </div>
+      <div class="card">
+        <h3>Safe substitution</h3>
+        <p>Parameter values are serialised as RDF terms before the query is parsed, so a value cannot change the structure of the query.</p>
+      </div>
+      <div class="card">
+        <h3>Reusable library</h3>
+        <p>The query-parameter module is a small Java library, used also by other projects, such as <a href="https://sparql-anything.cc">SPARQL Anything</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="narrow">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><strong>Write a query.</strong> Variables starting with an underscore are parameters: <code>?_name</code> is mandatory, <code>?__name</code> optional, a suffix gives the type, e.g. <code>?_city_iri</code> or <code>?_limit_number</code>.</li>
+      <li><strong>Store it.</strong> A <code>PUT</code> to <code>/basil</code> with the endpoint and the query creates a new API with a stable identifier.</li>
+      <li><strong>Use it.</strong> <code>GET /basil/{id}/api?name=value</code> binds the parameters, executes the query on the endpoint, and returns the result in the requested format.</li>
+      <li><strong>Manage it.</strong> Sub-resources <code>/spec</code>, <code>/view</code>, <code>/docs</code>, <code>/alias</code>, <code>/explain</code> and <code>/api-docs</code> let you inspect and maintain the API over HTTP.</li>
+    </ol>
+    <p>BASIL has no graphical interface of its own: it is controlled entirely through its HTTP API. See the <a href="docs/#rest">REST API reference</a>.</p>
+  </section>
+
+  <section class="narrow">
+    <h2>Get started</h2>
+    <p>Download <code>basil-server-1.0.0.jar</code>, <code>basil-server.ini</code> and <code>log4j2.xml</code> from the <a href="https://github.com/basilapi/basil/releases/latest">releases page</a>, then:</p>
+<pre><code>java -jar -Dbasil.configurationFile=./basil-server.ini \
+     -Dlog4j.configurationFile=./log4j2.xml \
+     basil-server-1.0.0.jar -p 8080</code></pre>
+    <p>Data is stored in <code>./basil-data</code> (Apache Jena TDB2). Continue with the <a href="docs/#quickstart">quick start</a>, or use BASIL <a href="docs/#java">as a Java library</a>.</p>
+  </section>
+
+  <section class="narrow">
+    <h2>About</h2>
+    <p>BASIL (<em>Building APIs SImpLy</em>) was developed at the <a href="https://kmi.open.ac.uk">Knowledge Media Institute</a>, The Open University, by Enrico Daga and Luca Panziera, and is released under the Apache License 2.0. Contributions, bug reports and questions are welcome on the <a href="https://github.com/basilapi/basil/issues">issue tracker</a>.</p>
+    <h3>Citing BASIL</h3>
+    <p>Enrico Daga, Luca Panziera, Carlos Pedrinaci. <em>A BASILar Approach for Building Web APIs on top of SPARQL Endpoints.</em> In: Proceedings of the Third Workshop on Services and Applications over Linked APIs and Data (SALAD 2015), CEUR Workshop Proceedings, vol. 1359, pp. 22–32, 2015. <a href="https://ceur-ws.org/Vol-1359/paper4.pdf">PDF</a></p>
+    <p>Enrico Daga, Luca Panziera, Carlos Pedrinaci. <em>BASIL: A Cloud Platform for Sharing and Reusing SPARQL Queries as Web APIs.</em> ISWC 2015 Posters &amp; Demonstrations, CEUR Workshop Proceedings, vol. 1486, 2015. <a href="https://ceur-ws.org/Vol-1486/paper_41.pdf">PDF</a></p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="inner">
+    <span>BASIL · Apache License 2.0</span>
+    <span><a href="https://github.com/basilapi/basil">Source</a> · <a href="https://github.com/basilapi/basil/releases">Releases</a> · <a href="https://github.com/basilapi/basil/issues">Issues</a> · <a href="ontology/ns/">Ontology</a></span>
+  </div>
+</footer>
+</body>
+</html>

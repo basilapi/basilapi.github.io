@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BASIL ontology — http://basilapi.github.io/ontology/ns#</title>
+  <link rel="icon" href="../../assets/logo.svg" type="image/svg+xml">
+  <link rel="alternate" type="text/turtle" href="basil.ttl">
+  <link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="inner">
+    <a class="brand" href="../../"><img src="../../assets/logo.svg" alt=""><span>BASIL</span></a>
+    <nav class="site-nav">
+      <a href="../../docs/">Documentation</a>
+      <a href="../../variables/">Variables</a>
+      <a href="../../docs/#java">Java library</a>
+      <a href="https://github.com/basilapi/basil">GitHub</a>
+    </nav>
+  </div>
+</header>
+<main class="narrow">
+  <h1>BASIL ontology</h1>
+  <p class="lead">Terms used by BASIL to describe the APIs, users and views it stores.</p>
+  <p>Namespace: <code>http://basilapi.github.io/ontology/ns#</code> · Turtle: <a href="basil.ttl">basil.ttl</a></p>
+  <p>Stored data uses the namespace configured as <code>basil.namespace</code> (by default <code>http://basilapi.github.io/data/ns/</code>).</p>
+
+  <h2>Classes</h2>
+  <table>
+    <thead><tr><th>Term</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr id="Api"><td><code>Api</code></td><td>An API: a SPARQL endpoint and a query, with its views, documentation and aliases.</td></tr>
+      <tr id="User"><td><code>User</code></td><td>A user of a BASIL instance, owner of APIs.</td></tr>
+      <tr id="View"><td><code>View</code></td><td>A template or script that post-processes the result of an API.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Properties</h2>
+  <table>
+    <thead><tr><th>Term</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr id="id"><td><code>id</code></td><td>Identifier of an API.</td></tr>
+      <tr id="name"><td><code>name</code></td><td>Name of an API or of a view.</td></tr>
+      <tr id="description"><td><code>description</code></td><td>Description of an API.</td></tr>
+      <tr id="created"><td><code>created</code></td><td>Creation date.</td></tr>
+      <tr id="modified"><td><code>modified</code></td><td>Date of the last change.</td></tr>
+      <tr id="alias"><td><code>alias</code></td><td>An alias of an API.</td></tr>
+      <tr id="endpoint"><td><code>endpoint</code></td><td>The SPARQL endpoint queried by an API.</td></tr>
+      <tr id="query"><td><code>query</code></td><td>The SPARQL query of an API.</td></tr>
+      <tr id="update"><td><code>update</code></td><td>The SPARQL Update of an API, when it is an update.</td></tr>
+      <tr id="expandedQuery"><td><code>expandedQuery</code></td><td>The query with prefixes expanded.</td></tr>
+      <tr id="api"><td><code>api</code></td><td>Links a user or a view to an API.</td></tr>
+      <tr id="view"><td><code>view</code></td><td>Links an API to one of its views.</td></tr>
+      <tr id="extension"><td><code>extension</code></td><td>Extension used to invoke a view (<code>/api.{extension}</code>).</td></tr>
+      <tr id="mimeType"><td><code>mimeType</code></td><td>Media type produced by a view.</td></tr>
+      <tr id="template"><td><code>template</code></td><td>Template or script of a view.</td></tr>
+      <tr id="engine"><td><code>engine</code></td><td>Engine of a view (Mustache or JavaScript).</td></tr>
+      <tr id="username"><td><code>username</code></td><td>User name of a user, or of the credentials of a protected endpoint.</td></tr>
+      <tr id="email"><td><code>email</code></td><td>E-mail of a user.</td></tr>
+      <tr id="password"><td><code>password</code></td><td>Password of a user, or of the credentials of a protected endpoint.</td></tr>
+    </tbody>
+  </table>
+</main>
+<footer class="site-footer">
+  <div class="inner">
+    <span>BASIL · Apache License 2.0</span>
+    <span><a href="https://github.com/basilapi/basil">Source</a> · <a href="https://github.com/basilapi/basil/releases">Releases</a> · <a href="https://github.com/basilapi/basil/issues">Issues</a></span>
+  </div>
+</footer>
+</body>
+</html>

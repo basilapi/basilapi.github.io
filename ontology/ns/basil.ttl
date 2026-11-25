@@ -1,0 +1,118 @@
+@prefix basil: <http://basilapi.github.io/ontology/ns#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://basilapi.github.io/ontology/ns#> a owl:Ontology ;
+  rdfs:label "BASIL ontology" ;
+  rdfs:seeAlso <https://github.com/basilapi/basil> .
+
+basil:Api a owl:Class ;
+  rdfs:label "Api" ;
+  rdfs:comment "An API: a SPARQL endpoint and a query, with its views, documentation and aliases." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:User a owl:Class ;
+  rdfs:label "User" ;
+  rdfs:comment "A user of a BASIL instance, owner of APIs." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:View a owl:Class ;
+  rdfs:label "View" ;
+  rdfs:comment "A template or script that post-processes the result of an API." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:id a rdf:Property ;
+  rdfs:label "id" ;
+  rdfs:comment "Identifier of an API." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:name a rdf:Property ;
+  rdfs:label "name" ;
+  rdfs:comment "Name of an API or of a view." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:description a rdf:Property ;
+  rdfs:label "description" ;
+  rdfs:comment "Description of an API." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:created a rdf:Property ;
+  rdfs:label "created" ;
+  rdfs:comment "Creation date." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:modified a rdf:Property ;
+  rdfs:label "modified" ;
+  rdfs:comment "Date of the last change." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:alias a rdf:Property ;
+  rdfs:label "alias" ;
+  rdfs:comment "An alias of an API." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:endpoint a rdf:Property ;
+  rdfs:label "endpoint" ;
+  rdfs:comment "The SPARQL endpoint queried by an API." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:query a rdf:Property ;
+  rdfs:label "query" ;
+  rdfs:comment "The SPARQL query of an API." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:update a rdf:Property ;
+  rdfs:label "update" ;
+  rdfs:comment "The SPARQL Update of an API, when it is an update." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:expandedQuery a rdf:Property ;
+  rdfs:label "expandedQuery" ;
+  rdfs:comment "The query with prefixes expanded." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:api a rdf:Property ;
+  rdfs:label "api" ;
+  rdfs:comment "Links a user or a view to an API." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:view a rdf:Property ;
+  rdfs:label "view" ;
+  rdfs:comment "Links an API to one of its views." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:extension a rdf:Property ;
+  rdfs:label "extension" ;
+  rdfs:comment "Extension used to invoke a view (/api.{extension})." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:mimeType a rdf:Property ;
+  rdfs:label "mimeType" ;
+  rdfs:comment "Media type produced by a view." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:template a rdf:Property ;
+  rdfs:label "template" ;
+  rdfs:comment "Template or script of a view." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:engine a rdf:Property ;
+  rdfs:label "engine" ;
+  rdfs:comment "Engine of a view (Mustache or JavaScript)." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:username a rdf:Property ;
+  rdfs:label "username" ;
+  rdfs:comment "User name of a user, or of the credentials of a protected endpoint." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:email a rdf:Property ;
+  rdfs:label "email" ;
+  rdfs:comment "E-mail of a user." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
+
+basil:password a rdf:Property ;
+  rdfs:label "password" ;
+  rdfs:comment "Password of a user, or of the credentials of a protected endpoint." ;
+  rdfs:isDefinedBy <http://basilapi.github.io/ontology/ns#> .
